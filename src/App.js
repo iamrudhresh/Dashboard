@@ -1,4 +1,3 @@
-// src/App.js
 import React from 'react';
 import CSVReader from './CSVReader';
 import './App.css';
