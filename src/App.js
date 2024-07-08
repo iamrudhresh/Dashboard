@@ -1,14 +1,16 @@
-import React from 'react';
-import CSVReader from './CSVReader';
-import './App.css';
+// src/App.js
 
-function App() {
-    return (
-        <div className="App">
-            <h1>CSV File Upload and Display</h1>
-            <CSVReader />
-        </div>
-    );
-}
+import React from 'react';
+import CSVReader from './components/CSVReader';
+import { Container } from '@mui/material';
+
+const App = () => {
+  return (
+    <Container>
+      <h1>CSV Reader</h1>
+      <CSVReader />
+    </Container>
+  );
+};
 
 export default App;
