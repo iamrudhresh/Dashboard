@@ -1,153 +1,105 @@
+// src/components/CSVReader.js
+
 import React, { useState } from 'react';
 import Papa from 'papaparse';
+import { TextField, Button, Box, Grid } from '@mui/material';
 
 const CSVReader = () => {
-    const [csvData, setCsvData] = useState([]);
-    const [filters, setFilters] = useState({});
-    const [dataTypes, setDataTypes] = useState({});
+  const [data, setData] = useState([]);
+  const [filters, setFilters] = useState({});
+  
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    Papa.parse(file, {
+      header: true,
+      dynamicTyping: true,
+      complete: (results) => {
+        setData(results.data);
+        initializeFilters(results.data);
+      },
+    });
+  };
 
-    const handleFileUpload = (event) => {
-        const file = event.target.files[0];
-
-        if (file) {
-            Papa.parse(file, {
-                complete: (result) => {
-                    const data = result.data;
-                    const types = detectDataTypes(data);
-                    setCsvData(data);
-                    setDataTypes(types);
-                    setFilters(initializeFilters(types));
-                },
-                header: true,
-            });
+  const initializeFilters = (data) => {
+    const initialFilters = {};
+    data.forEach(row => {
+      Object.keys(row).forEach(column => {
+        if (!initialFilters[column]) {
+          initialFilters[column] = {
+            min: Number.MAX_VALUE,
+            max: Number.MIN_VALUE,
+            type: typeof row[column]
+          };
         }
-    };
-
-    const detectDataTypes = (data) => {
-        const types = {};
-        const firstRow = data[0];
-        for (const key in firstRow) {
-            if (!isNaN(firstRow[key])) {
-                types[key] = 'number';
-            } else {
-                types[key] = 'string';
-            }
+        if (typeof row[column] === 'number') {
+          if (row[column] < initialFilters[column].min) initialFilters[column].min = row[column];
+          if (row[column] > initialFilters[column].max) initialFilters[column].max = row[column];
         }
-        return types;
-    };
+      });
+    });
+    setFilters(initialFilters);
+  };
 
-    const initializeFilters = (types) => {
-        const initialFilters = {};
-        for (const key in types) {
-            if (types[key] === 'number') {
-                const values = csvData.map(row => parseFloat(row[key])).filter(value => !isNaN(value));
-                initialFilters[key] = {
-                    min: Math.min(...values),
-                    max: Math.max(...values),
-                    currentMin: Math.min(...values),
-                    currentMax: Math.max(...values)
-                };
-            } else {
-                initialFilters[key] = '';
-            }
+  const handleFilterChange = (e, column) => {
+    setFilters({
+      ...filters,
+      [column]: {
+        ...filters[column],
+        value: e.target.value,
+      },
+    });
+  };
+
+  const filterData = () => {
+    return data.filter(row => {
+      return Object.keys(filters).every(column => {
+        if (filters[column].type === 'number') {
+          const [min, max] = filters[column].value.split('-').map(Number);
+          return row[column] >= min && row[column] <= max;
+        } else {
+          return row[column].toString().includes(filters[column].value);
         }
-        return initialFilters;
-    };
+      });
+    });
+  };
 
-    const handleFilterChange = (key, value) => {
-        setFilters(prevFilters => ({
-            ...prevFilters,
-            [key]: value
-        }));
-    };
-
-    const filterData = () => {
-        return csvData.filter(row => {
-            for (const key in filters) {
-                if (dataTypes[key] === 'number') {
-                    const value = parseFloat(row[key]);
-                    if (value < filters[key].currentMin || value > filters[key].currentMax) {
-                        return false;
-                    }
-                } else if (dataTypes[key] === 'string') {
-                    if (!row[key].includes(filters[key])) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        });
-    };
-
-    const filteredData = filterData();
-
-    return (
-        <div>
-            <input type="file" accept=".csv" onChange={handleFileUpload} />
-            {Object.keys(filters).length > 0 && (
-                <div className="filters">
-                    {Object.keys(filters).map(key => (
-                        <div key={key}>
-                            {dataTypes[key] === 'number' ? (
-                                <div>
-                                    <label>{key}:</label>
-                                    <input
-                                        type="number"
-                                        value={filters[key].currentMin}
-                                        min={filters[key].min}
-                                        max={filters[key].max}
-                                        onChange={(e) => handleFilterChange(key, {
-                                            ...filters[key],
-                                            currentMin: parseFloat(e.target.value)
-                                        })}
-                                    />
-                                    <input
-                                        type="number"
-                                        value={filters[key].currentMax}
-                                        min={filters[key].min}
-                                        max={filters[key].max}
-                                        onChange={(e) => handleFilterChange(key, {
-                                            ...filters[key],
-                                            currentMax: parseFloat(e.target.value)
-                                        })}
-                                    />
-                                </div>
-                            ) : (
-                                <div>
-                                    <label>{key}:</label>
-                                    <input
-                                        type="text"
-                                        value={filters[key]}
-                                        onChange={(e) => handleFilterChange(key, e.target.value)}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
-            {filteredData.length > 0 && (
-                <table>
-                    <thead>
-                        <tr>
-                            {Object.keys(filteredData[0]).map((header, index) => (
-                                <th key={index}>{header}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredData.map((row, rowIndex) => (
-                            <tr key={rowIndex}>
-                                {Object.values(row).map((value, cellIndex) => (
-                                    <td key={cellIndex}>{value}</td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
-        </div>
-    );
+  return (
+    <Box p={2}>
+      <input type="file" accept=".csv" onChange={handleFileUpload} />
+      {data.length > 0 && (
+        <>
+          <Box mt={2}>
+            {Object.keys(filters).map((column, index) => (
+              <TextField
+                key={index}
+                label={column}
+                variant="outlined"
+                margin="normal"
+                onChange={(e) => handleFilterChange(e, column)}
+                placeholder={filters[column].type === 'number' ? `${filters[column].min}-${filters[column].max}` : ''}
+              />
+            ))}
+          </Box>
+          <Grid container spacing={2}>
+            {Object.keys(data[0]).map((column, index) => (
+              <Grid item key={index} xs>
+                <Box>{column}</Box>
+              </Grid>
+            ))}
+            {filterData().map((row, rowIndex) => (
+              <Grid container key={rowIndex} spacing={2}>
+                {Object.keys(row).map((column, colIndex) => (
+                  <Grid item key={colIndex} xs>
+                    <Box>{row[column]}</Box>
+                  </Grid>
+                ))}
+              </Grid>
+            ))}
+          </Grid>
+        </>
+      )}
+    </Box>
+  );
 };
 
 export default CSVReader;
