@@ -1,14 +1,20 @@
 import React from 'react';
-import CSVReader from './CSVReader';
-import './App.css';
+import JsonToCsv from './JsonToCsv';
 
 function App() {
-    return (
-        <div className="App">
-            <h1>CSV File Upload and Display</h1>
-            <CSVReader />
-        </div>
-    );
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>CSV Converter Dashboard</h1>
+      </header>
+      <main className="App-main">
+        <JsonToCsv />
+      </main>
+      <footer className="App-footer">
+        <p>&copy; 2024 Your Company. All rights reserved.</p>
+      </footer>
+    </div>
+  );
 }
 
 export default App;
